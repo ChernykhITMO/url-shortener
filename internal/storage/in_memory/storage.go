@@ -1,18 +1,27 @@
 package in_memory
 
 import (
-	"sync"
+	"context"
+	"fmt"
+
+	"github.com/ChernykhITMO/url-shortener/internal/storage"
 )
 
-type Storage struct {
-	aliasToURL map[string]string
-	urlToAlias map[string]string
-	mux        sync.RWMutex
-}
+func (s *Storage) Create(ctx context.Context, alias, originalURL string) error {
+	const op = "in_memory.Create"
 
-func New() *Storage {
-	return &Storage{
-		aliasToURL: make(map[string]string),
-		urlToAlias: make(map[string]string),
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	if existingURL, ok := s.aliasToURL[alias]; ok && existingURL != originalURL {
+		return fmt.Errorf("%s: %w", op, storage.ErrAliasConflict)
 	}
+	if existingAlias, ok := s.urlToAlias[originalURL]; ok && existingAlias != alias {
+		return fmt.Errorf("%s: %w", op, storage.ErrURLConflict)
+	}
+
+	s.urlToAlias[originalURL] = alias
+	s.aliasToURL[alias] = originalURL
+
+	return nil
 }

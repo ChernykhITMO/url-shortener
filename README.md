@@ -107,6 +107,10 @@ docker compose exec -T db psql -U postgres -d postgres < migrations/migrations/0
 go test ./...
 ```
 
+```bash
+go test -race ./internal/storage/in_memory -run Concurrent
+```
+
 ## Алгоритм создания alias
 - генерируется массив длиной `10` байт с криптографически случайными значениями
 - каждый байт маппится в символ алфавита через `byte % len(alphabet)`
