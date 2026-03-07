@@ -86,19 +86,15 @@ func validateConfig(cfg *Config) error {
 	if cfg.HTTPServer.Address == "" {
 		return fmt.Errorf("%s: http_server.address is required", op)
 	}
-
 	if cfg.Service.MaxAttempts <= 0 {
 		return fmt.Errorf("%s: service.max_attempts must be > 0", op)
 	}
-
 	if err := validateHTTPServerConfig(cfg.HTTPServer); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
-
 	if err := validatePostgresConfig(cfg.Postgres); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
-
 	return nil
 }
 
@@ -125,6 +121,7 @@ func validateHTTPServerConfig(c HTTPServer) error {
 
 func validatePostgresConfig(c Postgres) error {
 	const op = "config.validatePostgresConfig"
+
 	if c.DSN != "" {
 		if c.MaxOpenConns < 0 {
 			return fmt.Errorf("%s: postgres.max_open_conns must be >= 0", op)
