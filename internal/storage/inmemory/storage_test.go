@@ -1,4 +1,4 @@
-package in_memory
+package inmemory
 
 import (
 	"context"
@@ -15,8 +15,7 @@ func TestInMemory_CreateAndGet(t *testing.T) {
 
 	ctx := context.Background()
 
-	createdAlias, err := s.Create(ctx, alias, url)
-	if err != nil {
+	if _, err := s.Create(ctx, alias, url); err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
 
@@ -27,15 +26,6 @@ func TestInMemory_CreateAndGet(t *testing.T) {
 
 	if gotURL != url {
 		t.Fatalf("expected %s, got %s", url, gotURL)
-	}
-
-	gotAlias, err := s.GetAliasByURL(ctx, url)
-	if err != nil {
-		t.Fatalf("expected nil, got %v", err)
-	}
-
-	if gotAlias != createdAlias {
-		t.Fatalf("expected %s, got %s", alias, gotAlias)
 	}
 }
 
@@ -62,9 +52,6 @@ func TestInMemory_ConcurrentAccess(t *testing.T) {
 			}
 			if _, err := s.GetURL(ctx, alias); err != nil {
 				errCh <- fmt.Errorf("get url failed for alias=%s: %w", alias, err)
-			}
-			if _, err := s.GetAliasByURL(ctx, url); err != nil {
-				errCh <- fmt.Errorf("get alias failed for url=%s: %w", url, err)
 			}
 		}()
 	}

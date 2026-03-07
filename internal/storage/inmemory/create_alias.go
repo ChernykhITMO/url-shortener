@@ -1,4 +1,4 @@
-package in_memory
+package inmemory
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"github.com/ChernykhITMO/url-shortener/internal/storage"
 )
 
-func (s *Storage) Create(ctx context.Context, alias, originalURL string) (string, error) {
-	const op = "in_memory.Create"
+func (s *Storage) Create(_ context.Context, alias, originalURL string) (string, error) {
+	const op = "inmemory.Create"
 
 	s.mux.Lock()
 	defer s.mux.Unlock()

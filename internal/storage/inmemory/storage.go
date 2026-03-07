@@ -1,8 +1,6 @@
-package in_memory
+package inmemory
 
-import (
-	"sync"
-)
+import "sync"
 
 type Storage struct {
 	aliasToURL map[string]string

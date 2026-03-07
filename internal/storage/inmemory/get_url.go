@@ -1,4 +1,4 @@
-package in_memory
+package inmemory
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"github.com/ChernykhITMO/url-shortener/internal/storage"
 )
 
-func (s *Storage) GetURL(ctx context.Context, alias string) (string, error) {
-	const op = "in_memory.GetURL"
+func (s *Storage) GetURL(_ context.Context, alias string) (string, error) {
+	const op = "inmemory.GetURL"
 
 	s.mux.RLock()
 	url, ok := s.aliasToURL[alias]
