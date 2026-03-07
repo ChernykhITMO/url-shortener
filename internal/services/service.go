@@ -74,9 +74,10 @@ func normalizeAndValidateURL(rawURL string) (string, error) {
 
 func generateAlias() (string, error) {
 	const op = "services.genAlias"
-	out := make([]byte, alias.Length)
 
-	const maxNum = 256 - (256 % len(alphabet))
+	out := make([]byte, alias.Length)
+	const byteRange = 256
+	const maxNum = byteRange - (byteRange % len(alphabet))
 
 	for i := 0; i < alias.Length; {
 		var num [1]byte
