@@ -47,12 +47,17 @@ func InitConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	normalizationCfg(&cfg)
+	normalizeConfig(&cfg)
+	applyEnv(&cfg)
+
+	if err := validateConfig(&cfg); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
 
 	return &cfg, nil
 }
 
-func normalizationCfg(cfg *Config) {
+func normalizeConfig(cfg *Config) {
 	if cfg.Env == "" {
 		cfg.Env = "local"
 	}
@@ -64,4 +69,75 @@ func normalizationCfg(cfg *Config) {
 	if cfg.HTTPServer.Address == "" {
 		cfg.HTTPServer.Address = ":8080"
 	}
+}
+
+func applyEnv(cfg *Config) {
+	if v := os.Getenv("HTTP_ADDR"); v != "" {
+		cfg.HTTPServer.Address = v
+	}
+	if v := os.Getenv("POSTGRES_DSN"); v != "" {
+		cfg.Postgres.DSN = v
+	}
+}
+
+func validateConfig(cfg *Config) error {
+	const op = "config.validateConfig"
+
+	if cfg.HTTPServer.Address == "" {
+		return fmt.Errorf("%s: http_server.address is required", op)
+	}
+
+	if cfg.Service.MaxAttempts <= 0 {
+		return fmt.Errorf("%s: service.max_attempts must be > 0", op)
+	}
+
+	if err := validateHTTPServerConfig(cfg.HTTPServer); err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	if err := validatePostgresConfig(cfg.Postgres); err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
+func validateHTTPServerConfig(c HTTPServer) error {
+	const op = "config.validateHTTPServerConfig"
+
+	if c.ReadHeaderTimeout <= 0 {
+		return fmt.Errorf("%s: http_server.read_header_timeout must be > 0", op)
+	}
+	if c.ReadTimeout <= 0 {
+		return fmt.Errorf("%s: http_server.read_timeout must be > 0", op)
+	}
+	if c.WriteTimeout <= 0 {
+		return fmt.Errorf("%s: http_server.write_timeout must be > 0", op)
+	}
+	if c.IdleTimeout <= 0 {
+		return fmt.Errorf("%s: http_server.idle_timeout must be > 0", op)
+	}
+	if c.ShutdownTimeout <= 0 {
+		return fmt.Errorf("%s: http_server.shutdown_timeout must be > 0", op)
+	}
+	return nil
+}
+
+func validatePostgresConfig(c Postgres) error {
+	const op = "config.validatePostgresConfig"
+	if c.DSN != "" {
+		if c.MaxOpenConns < 0 {
+			return fmt.Errorf("%s: postgres.max_open_conns must be >= 0", op)
+		}
+		if c.MaxIdleConns < 0 {
+			return fmt.Errorf("%s: postgres.max_idle_conns must be >= 0", op)
+		}
+		if c.MaxOpenConns > 0 && c.MaxIdleConns > c.MaxOpenConns {
+			return fmt.Errorf("%s: postgres.max_idle_conns must be <= postgres.max_open_conns", op)
+		}
+		if c.ConnMaxLifetime < 0 {
+			return fmt.Errorf("%s: postgres.conn_max_lifetime must be >= 0", op)
+		}
+	}
+	return nil
 }

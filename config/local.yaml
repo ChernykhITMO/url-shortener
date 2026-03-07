@@ -2,14 +2,12 @@ env: local
 service:
   max_attempts: 20
 http_server:
-  address: ":8080"
   read_timeout: 5s
   read_header_timeout: 2s
   write_timeout: 10s
   idle_timeout: 60s
   shutdown_timeout: 5s
 postgres:
-  dsn: "postgres://postgres:postgres@db:5432/postgres?sslmode=disable"
   max_open_conns: 5
   max_idle_conns: 5
   conn_max_lifetime: 1h

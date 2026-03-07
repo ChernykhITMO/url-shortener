@@ -12,7 +12,7 @@ import (
 	app_http "github.com/ChernykhITMO/url-shortener/cmd/app/http"
 	"github.com/ChernykhITMO/url-shortener/internal/config"
 	"github.com/ChernykhITMO/url-shortener/internal/services"
-	"github.com/ChernykhITMO/url-shortener/internal/storage/in_memory"
+	"github.com/ChernykhITMO/url-shortener/internal/storage/inmemory"
 	"github.com/ChernykhITMO/url-shortener/internal/storage/postgres"
 )
 
@@ -51,8 +51,12 @@ func run() {
 
 	switch *storageStr {
 	case inMemoryStorage:
-		storage = in_memory.New()
+		storage = inmemory.New()
 	case postgresStorage:
+		if cfg.Postgres.DSN == "" {
+			log.Error("postgres.dsn is required for postgres storage")
+			os.Exit(1)
+		}
 		storage, err = postgres.New(ctx, cfg.Postgres)
 		if err != nil {
 			log.Error("failed create storage", slog.Any("err", err))
