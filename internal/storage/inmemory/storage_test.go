@@ -15,7 +15,8 @@ func TestInMemory_CreateAndGet(t *testing.T) {
 
 	ctx := context.Background()
 
-	if err := s.Create(ctx, alias, url); err != nil {
+	createdAlias, err := s.Create(ctx, alias, url)
+	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
 
@@ -33,7 +34,7 @@ func TestInMemory_CreateAndGet(t *testing.T) {
 		t.Fatalf("expected nil, got %v", err)
 	}
 
-	if gotAlias != alias {
+	if gotAlias != createdAlias {
 		t.Fatalf("expected %s, got %s", alias, gotAlias)
 	}
 }
@@ -56,7 +57,7 @@ func TestInMemory_ConcurrentAccess(t *testing.T) {
 			alias := fmt.Sprintf("alias_%04d", i)
 			url := fmt.Sprintf("https://example.com/%d", i)
 
-			if err := s.Create(ctx, alias, url); err != nil {
+			if _, err := s.Create(ctx, alias, url); err != nil {
 				errCh <- fmt.Errorf("create failed for alias=%s url=%s: %w", alias, url, err)
 			}
 			if _, err := s.GetURL(ctx, alias); err != nil {

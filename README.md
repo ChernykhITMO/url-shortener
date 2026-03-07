@@ -8,7 +8,7 @@
 
 ## Архитектура
 Проект построен по трехслойной архитектуре:
-- `internal/storage` — реализации хранилища (`in_memory`, `postgres`).
+- `internal/storage` — реализации хранилища (`inmemory`, `postgres`).
 - `internal/services` — бизнес-логика (валидация URL, генерация alias, обработка конфликтов).
 - `internal/http/handlers` — HTTP transport и маппинг ошибок в статус-коды.
 - `internal/http/middleware` — method check, recover, logging.
@@ -69,7 +69,7 @@ Error (пример):
 ```
 
 Ошибки:
-- `400` — пустой alias
+- `400` — невалидный alias (длина/алфавит)
 - `404` — alias не найден
 - `500` — внутренняя ошибка
 
@@ -85,17 +85,24 @@ go run ./cmd/app --storage=postgres --config=./config/local.yaml
 
 ## Запуск через Docker
 
-### 1. Поднять сервисы
+Скопировать переменные окружения:
+```bash
+cp .env.example .env
+```
+
+```bash
+docker compose config
+```
 ```bash
 docker compose up --build
 ```
 
-### 2. Применить миграцию
-```bash
-docker compose exec -T db psql -U postgres -d postgres < migrations/migrations/000001_init.up.sql
-```
+Что делает `docker compose up --build`:
+- поднимает `db` (PostgreSQL);
+- запускает `migrate` и применяет SQL-миграции через `goose`;
+- после успешных миграций запускает `app`.
 
-### 3. Переключение storage
+#### Переключение storage
 По умолчанию контейнер запускается с `--storage=postgres` (в `Dockerfile` через `CMD`)
 
 Можно изменить на `--storage=inmemory`
@@ -108,18 +115,33 @@ go test ./...
 ```
 
 ```bash
-go test -race ./internal/storage/in_memory -run Concurrent
+go test -race ./...
+```
+
+Интеграционные тесты PostgreSQL:
+```bash
+docker compose up -d db
+go test -tags=integration ./internal/storage/postgres -v
 ```
 
 ## Алгоритм создания alias
-- генерируется массив длиной `10` байт с криптографически случайными значениями
-- каждый байт маппится в символ алфавита через `byte % len(alphabet)`
+- генерируется массив длиной 10 байт с криптографически случайными значениями
+- принимаются только байты < 252 т.к. 252 кратно 63
+- байты 252..255 отбрасываются и генерируются заново
+- индекс символа вычисляется как byte % 63
 - итоговый alias состоит только из разрешенных символов
-- пространство значений: `63^10` комбинаций
+- пространство значений: 63^10 комбинаций
 
 ## Почему алгоритм устойчив
 - в БД есть уникальность по `alias` (PK) и по `original_url` (UNIQUE)
-- при `alias conflict` сервис генерирует новый alias и повторяет попытку
-- при `url conflict` (гонка между запросами) сервис читает уже созданный alias и возвращает его;
+- при `alias conflict` сервис генерирует новый alias и повторяет попытку;
+- при повторном `original_url` PostgreSQL-слой атомарно возвращает уже существующий alias в одном SQL-запросе (`INSERT ... ON CONFLICT ... RETURNING` + `COALESCE`);
 - это сохраняет инвариант: один `original_url` -> один alias.
 
+## Правила URL
+- принимаются только URL со схемой `http` или `https`;
+- перед сохранением URL нормализуется:
+  - удаляются внешние пробелы;
+  - схема и host приводятся к нижнему регистру;
+  - удаляются default ports (`:80` для `http`, `:443` для `https`);
+  - если path пустой, устанавливается `/`.
