@@ -11,8 +11,7 @@ import (
 func TestGetURL_Success_ReturnsURL(t *testing.T) {
 	url := "https://google.com"
 	s := New(&MockStorage{
-		GetAliasByURLFn: func(ctx context.Context, originalURL string) (string, error) { return "", nil },
-		CreateFn:        func(ctx context.Context, alias, originalURL string) error { return nil },
+		CreateFn: func(ctx context.Context, alias, originalURL string) (string, error) { return "", nil },
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "https://google.com", nil
 		},
@@ -32,8 +31,7 @@ func TestGetURL_Success_ReturnsURL(t *testing.T) {
 func TestGetURL_NotFound_ReturnsErrNotFound(t *testing.T) {
 	alias := "fixedAlias"
 	s := New(&MockStorage{
-		GetAliasByURLFn: func(ctx context.Context, originalURL string) (string, error) { return "", nil },
-		CreateFn:        func(ctx context.Context, alias, originalURL string) error { return nil },
+		CreateFn: func(ctx context.Context, alias, originalURL string) (string, error) { return "", nil },
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", storage.ErrNotFound
 		},
@@ -49,12 +47,30 @@ func TestGetURL_NotFound_ReturnsErrNotFound(t *testing.T) {
 	}
 }
 
+func TestGetURL_InvalidAlias_ReturnsErrInvalidAlias(t *testing.T) {
+	s := New(&MockStorage{
+		CreateFn: func(ctx context.Context, alias, originalURL string) (string, error) { return "", nil },
+		GetURLFn: func(ctx context.Context, alias string) (string, error) {
+			t.Fatal("storage should not be called for invalid alias")
+			return "", nil
+		},
+	}, 20)
+
+	_, err := s.GetURL(context.Background(), "short")
+	if err == nil {
+		t.Fatalf("expected %v, got nil", ErrInvalidAlias)
+	}
+
+	if !errors.Is(err, ErrInvalidAlias) {
+		t.Fatalf("expected %v, got %v", ErrInvalidAlias, err)
+	}
+}
+
 func TestGetURL_StorageError_ReturnsError(t *testing.T) {
 	errDBDown := errors.New("db down")
 	alias := "fixedAlias"
 	s := New(&MockStorage{
-		GetAliasByURLFn: func(ctx context.Context, originalURL string) (string, error) { return "", nil },
-		CreateFn:        func(ctx context.Context, alias, originalURL string) error { return nil },
+		CreateFn: func(ctx context.Context, alias, originalURL string) (string, error) { return "", nil },
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", errDBDown
 		},
