@@ -35,7 +35,7 @@ func (h *Handler) CreateAlias(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		h.log.Error("extra data after json", slog.Any("err", err))
+		h.log.Error("unexpected data after JSON object", slog.Any("err", err))
 		h.writeJSONError(w, http.StatusBadRequest, msgInvalidJSON)
 		return
 	}
