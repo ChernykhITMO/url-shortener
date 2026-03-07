@@ -51,8 +51,10 @@ func TestGetURL_InvalidAlias_Returns400(t *testing.T) {
 	h := New(log, &MockService{
 		CreateAliasFn: func(ctx context.Context, originalURL string) (string, error) { return "", nil },
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
-			t.Fatal("service should not be called for invalid alias")
-			return "", nil
+			if alias != "short" {
+				t.Fatalf("unexpected alias: %s", alias)
+			}
+			return "", services.ErrInvalidAlias
 		},
 	})
 

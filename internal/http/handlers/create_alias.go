@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/ChernykhITMO/url-shortener/internal/http/dto"
 	"github.com/ChernykhITMO/url-shortener/internal/http/respond"
-	"github.com/ChernykhITMO/url-shortener/internal/transport/http/dto"
 )
 
 const maxCreateAliasBodyBytes = 1024
@@ -26,21 +26,21 @@ func (h *Handler) CreateAlias(w http.ResponseWriter, r *http.Request) {
 	if err := dec.Decode(&req); err != nil {
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {
-			h.writeError(w, http.StatusRequestEntityTooLarge, msgPayloadTooLarge)
+			h.writeJSONError(w, http.StatusRequestEntityTooLarge, msgPayloadTooLarge)
 			return
 		}
 		h.log.Error("decode failed", slog.Any("err", err))
-		h.writeError(w, http.StatusBadRequest, msgInvalidJSON)
+		h.writeJSONError(w, http.StatusBadRequest, msgInvalidJSON)
 		return
 	}
 
 	if err := dec.Decode(&struct{}{}); err != io.EOF {
 		h.log.Error("extra data after json", slog.Any("err", err))
-		h.writeError(w, http.StatusBadRequest, msgInvalidJSON)
+		h.writeJSONError(w, http.StatusBadRequest, msgInvalidJSON)
 		return
 	}
 
-	alias, err := h.Service.CreateAlias(r.Context(), req.URL)
+	alias, err := h.service.CreateAlias(r.Context(), req.URL)
 	if err != nil {
 		h.writeServiceError(w, err)
 		return
