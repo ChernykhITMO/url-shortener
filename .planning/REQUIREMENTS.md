@@ -30,18 +30,18 @@ None yet.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| URL-01 | Unmapped | Pending |
-| URL-02 | Unmapped | Pending |
-| URL-03 | Unmapped | Pending |
-| URL-04 | Unmapped | Pending |
-| URL-05 | Unmapped | Pending |
-| URL-06 | Unmapped | Pending |
+| URL-01 | Phase 1 | Pending |
+| URL-02 | Phase 1 | Pending |
+| URL-03 | Phase 1 | Pending |
+| URL-04 | Phase 1 | Pending |
+| URL-05 | Phase 1 | Pending |
+| URL-06 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 6 total
-- Mapped to phases: 0
-- Unmapped: 6 ⚠️
+- Mapped to phases: 6
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-07*
-*Last updated: 2026-04-07 after initialization*
+*Last updated: 2026-04-07 after roadmap creation*
