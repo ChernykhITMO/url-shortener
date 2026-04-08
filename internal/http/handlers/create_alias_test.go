@@ -11,7 +11,11 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/ChernykhITMO/url-shortener/internal/services"
 )
+
+const testMaxCreateAliasBodyBytes int64 = 1024
 
 type errorResponse struct {
 	Error string `json:"error"`
@@ -29,7 +33,7 @@ func TestCreateAlias_Success_Returns201AndAlias(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", nil
 		},
-	})
+	}, testMaxCreateAliasBodyBytes)
 
 	body := []byte(`{"url": "https://google.com"}`)
 	req := httptest.NewRequest(http.MethodPost, "/url", bytes.NewReader(body))
@@ -54,6 +58,122 @@ func TestCreateAlias_Success_Returns201AndAlias(t *testing.T) {
 	}
 }
 
+func TestCreateAlias_URLValidationContract(t *testing.T) {
+	tests := []struct {
+		name       string
+		body       string
+		setupMock  func(t *testing.T, originalURL string) (string, error)
+		wantStatus int
+		wantAlias  string
+		wantError  string
+	}{
+		{
+			name: "empty url returns 400 invalid url",
+			body: `{"url":""}`,
+			setupMock: func(t *testing.T, originalURL string) (string, error) {
+				if originalURL != "" {
+					t.Fatalf("unexpected url: %q", originalURL)
+				}
+				return "", services.ErrInvalidURL
+			},
+			wantStatus: http.StatusBadRequest,
+			wantError:  msgInvalidURL,
+		},
+		{
+			name: "malformed url returns 400 invalid url",
+			body: `{"url":"not-a-url"}`,
+			setupMock: func(t *testing.T, originalURL string) (string, error) {
+				if originalURL != "not-a-url" {
+					t.Fatalf("unexpected url: %q", originalURL)
+				}
+				return "", services.ErrInvalidURL
+			},
+			wantStatus: http.StatusBadRequest,
+			wantError:  msgInvalidURL,
+		},
+		{
+			name: "unsupported scheme returns 400 invalid url",
+			body: `{"url":"ftp://example.com"}`,
+			setupMock: func(t *testing.T, originalURL string) (string, error) {
+				if originalURL != "ftp://example.com" {
+					t.Fatalf("unexpected url: %q", originalURL)
+				}
+				return "", services.ErrInvalidURL
+			},
+			wantStatus: http.StatusBadRequest,
+			wantError:  msgInvalidURL,
+		},
+		{
+			name: "valid https returns 201 alias",
+			body: `{"url":"https://example.com"}`,
+			setupMock: func(t *testing.T, originalURL string) (string, error) {
+				if originalURL != "https://example.com" {
+					t.Fatalf("unexpected url: %q", originalURL)
+				}
+				return "httpsAlias", nil
+			},
+			wantStatus: http.StatusCreated,
+			wantAlias:  "httpsAlias",
+		},
+		{
+			name: "valid http returns 201 alias",
+			body: `{"url":"http://example.com"}`,
+			setupMock: func(t *testing.T, originalURL string) (string, error) {
+				if originalURL != "http://example.com" {
+					t.Fatalf("unexpected url: %q", originalURL)
+				}
+				return "httpAlias", nil
+			},
+			wantStatus: http.StatusCreated,
+			wantAlias:  "httpAlias",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+			s := New(log, &MockService{
+				CreateAliasFn: func(ctx context.Context, originalURL string) (string, error) {
+					return tt.setupMock(t, originalURL)
+				},
+				GetURLFn: func(ctx context.Context, alias string) (string, error) {
+					return "", nil
+				},
+			}, testMaxCreateAliasBodyBytes)
+
+			req := httptest.NewRequest(http.MethodPost, "/url", bytes.NewReader([]byte(tt.body)))
+			rec := httptest.NewRecorder()
+
+			s.CreateAlias(rec, req)
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("expected status %d, got %d", tt.wantStatus, rec.Code)
+			}
+
+			if tt.wantError != "" {
+				var resp errorResponse
+				if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+					t.Fatalf("invalid json response: %v", err)
+				}
+				if resp.Error != tt.wantError {
+					t.Fatalf("expected error %q, got %q", tt.wantError, resp.Error)
+				}
+				return
+			}
+
+			var resp struct {
+				Alias string `json:"alias"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+				t.Fatalf("invalid json response: %v", err)
+			}
+			if resp.Alias != tt.wantAlias {
+				t.Fatalf("expected alias %q, got %q", tt.wantAlias, resp.Alias)
+			}
+		})
+	}
+}
+
 func TestCreateAlias_InvalidJSON_Returns400AndErrorJSON(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	s := New(log, &MockService{
@@ -64,7 +184,7 @@ func TestCreateAlias_InvalidJSON_Returns400AndErrorJSON(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", nil
 		},
-	})
+	}, testMaxCreateAliasBodyBytes)
 
 	body := []byte(`{"url": "https://google.com"`)
 	req := httptest.NewRequest(http.MethodPost, "/url", bytes.NewReader(body))
@@ -94,9 +214,9 @@ func TestCreateAlias_PayloadTooLarge_Returns413(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", nil
 		},
-	})
+	}, testMaxCreateAliasBodyBytes)
 
-	tooLargeURL := strings.Repeat("a", maxCreateAliasBodyBytes+100)
+	tooLargeURL := strings.Repeat("a", int(testMaxCreateAliasBodyBytes)+100)
 	body := []byte(`{"url":"` + tooLargeURL + `"}`)
 	req := httptest.NewRequest(http.MethodPost, "/url", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -126,7 +246,7 @@ func TestCreateAlias_ServiceUnknownError_Returns500(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", nil
 		},
-	})
+	}, testMaxCreateAliasBodyBytes)
 
 	body := []byte(`{"url":"https://google.com"}`)
 	req := httptest.NewRequest(http.MethodPost, "/url", bytes.NewReader(body))

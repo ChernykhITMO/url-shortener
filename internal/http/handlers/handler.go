@@ -26,14 +26,16 @@ type Service interface {
 }
 
 type Handler struct {
-	log     *slog.Logger
-	service Service
+	log                     *slog.Logger
+	service                 Service
+	maxCreateAliasBodyBytes int64
 }
 
-func New(log *slog.Logger, service Service) *Handler {
+func New(log *slog.Logger, service Service, maxCreateAliasBodyBytes int64) *Handler {
 	return &Handler{
-		log:     log,
-		service: service,
+		log:                     log,
+		service:                 service,
+		maxCreateAliasBodyBytes: maxCreateAliasBodyBytes,
 	}
 }
 

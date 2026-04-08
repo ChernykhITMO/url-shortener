@@ -15,7 +15,7 @@ func TestGetURL_Success_ReturnsURL(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "https://google.com", nil
 		},
-	}, 20)
+	}, 20, 10)
 
 	alias := "fixedAlias"
 	got, err := s.GetURL(context.Background(), alias)
@@ -35,7 +35,7 @@ func TestGetURL_NotFound_ReturnsErrNotFound(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", storage.ErrNotFound
 		},
-	}, 20)
+	}, 20, 10)
 
 	_, err := s.GetURL(context.Background(), alias)
 	if err == nil {
@@ -54,7 +54,7 @@ func TestGetURL_InvalidAlias_ReturnsErrInvalidAlias(t *testing.T) {
 			t.Fatal("storage should not be called for invalid alias")
 			return "", nil
 		},
-	}, 20)
+	}, 20, 10)
 
 	_, err := s.GetURL(context.Background(), "short")
 	if err == nil {
@@ -74,7 +74,7 @@ func TestGetURL_StorageError_ReturnsError(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", errDBDown
 		},
-	}, 20)
+	}, 20, 10)
 
 	_, err := s.GetURL(context.Background(), alias)
 	if err == nil {

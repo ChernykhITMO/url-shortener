@@ -11,14 +11,12 @@ import (
 	"github.com/ChernykhITMO/url-shortener/internal/http/respond"
 )
 
-const maxCreateAliasBodyBytes = 1024
-
 func (h *Handler) CreateAlias(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		_ = r.Body.Close()
 	}()
 
-	limited := http.MaxBytesReader(w, r.Body, maxCreateAliasBodyBytes)
+	limited := http.MaxBytesReader(w, r.Body, h.maxCreateAliasBodyBytes)
 	dec := json.NewDecoder(limited)
 	dec.DisallowUnknownFields()
 

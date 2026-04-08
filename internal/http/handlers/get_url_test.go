@@ -23,7 +23,7 @@ func TestGetURL_Success_Returns200AndURL(t *testing.T) {
 			}
 			return "https://google.com", nil
 		},
-	})
+	}, testMaxCreateAliasBodyBytes)
 
 	req := httptest.NewRequest(http.MethodGet, "/url/fixedAlias", nil)
 	req.SetPathValue("alias", "fixedAlias")
@@ -56,7 +56,7 @@ func TestGetURL_InvalidAlias_Returns400(t *testing.T) {
 			}
 			return "", services.ErrInvalidAlias
 		},
-	})
+	}, testMaxCreateAliasBodyBytes)
 
 	req := httptest.NewRequest(http.MethodGet, "/url/short", nil)
 	req.SetPathValue("alias", "short")
@@ -84,7 +84,7 @@ func TestGetURL_NotFound_Returns404(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", services.ErrNotFound
 		},
-	})
+	}, testMaxCreateAliasBodyBytes)
 
 	req := httptest.NewRequest(http.MethodGet, "/url/fixedAlias", nil)
 	req.SetPathValue("alias", "fixedAlias")
@@ -112,7 +112,7 @@ func TestGetURL_ServiceUnknownError_Returns500(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", errors.New("db down")
 		},
-	})
+	}, testMaxCreateAliasBodyBytes)
 
 	req := httptest.NewRequest(http.MethodGet, "/url/fixedAlias", nil)
 	req.SetPathValue("alias", "fixedAlias")

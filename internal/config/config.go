@@ -17,6 +17,7 @@ type Config struct {
 
 type Service struct {
 	MaxAttempts int `yaml:"max_attempts"`
+	AliasLength int `yaml:"alias_length"`
 }
 
 type HTTPServer struct {
@@ -26,6 +27,7 @@ type HTTPServer struct {
 	WriteTimeout      time.Duration `yaml:"write_timeout"`
 	IdleTimeout       time.Duration `yaml:"idle_timeout"`
 	ShutdownTimeout   time.Duration `yaml:"shutdown_timeout"`
+	MaxBodyBytes      int64         `yaml:"max_body_bytes"`
 }
 
 type Postgres struct {
@@ -66,8 +68,16 @@ func normalizeConfig(cfg *Config) {
 		cfg.Service.MaxAttempts = 20
 	}
 
+	if cfg.Service.AliasLength <= 0 {
+		cfg.Service.AliasLength = 10
+	}
+
 	if cfg.HTTPServer.Address == "" {
 		cfg.HTTPServer.Address = ":8080"
+	}
+
+	if cfg.HTTPServer.MaxBodyBytes <= 0 {
+		cfg.HTTPServer.MaxBodyBytes = 1024
 	}
 }
 
@@ -90,6 +100,10 @@ func validateConfig(cfg *Config) error {
 
 	if cfg.Service.MaxAttempts <= 0 {
 		return fmt.Errorf("%s: service.max_attempts must be > 0", op)
+	}
+
+	if cfg.Service.AliasLength <= 0 {
+		return fmt.Errorf("%s: service.alias_length must be > 0", op)
 	}
 
 	if err := validateHTTPServerConfig(cfg.HTTPServer); err != nil {
@@ -124,6 +138,10 @@ func validateHTTPServerConfig(c HTTPServer) error {
 
 	if c.ShutdownTimeout <= 0 {
 		return fmt.Errorf("%s: http_server.shutdown_timeout must be > 0", op)
+	}
+
+	if c.MaxBodyBytes <= 0 {
+		return fmt.Errorf("%s: http_server.max_body_bytes must be > 0", op)
 	}
 
 	return nil

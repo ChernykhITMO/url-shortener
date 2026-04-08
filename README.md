@@ -18,6 +18,7 @@
 - длина: `10` символов;
 - алфавит: `[a-zA-Z0-9_]`;
 - один `original_url` всегда маппится в один и тот же alias.
+- значения по умолчанию задаются в `config/local.yaml` через `service.alias_length` и `http_server.max_body_bytes`.
 
 ## API
 
@@ -51,6 +52,19 @@ Error (пример):
 - `500` — внутренняя ошибка
 - `503` — превышено число попыток генерации alias
 
+Правила валидации URL для `POST /url`:
+- принимаются только URL со схемой `http` или `https`;
+- пустой `url` отклоняется с `400` и `{"error":"invalid url"}`;
+- невалидный URL отклоняется с `400` и `{"error":"invalid url"}`;
+- внешние пробелы удаляются перед валидацией и сохранением.
+
+Примеры:
+- `{"url":""}` -> `400` + `{"error":"invalid url"}`
+- `{"url":"not-a-url"}` -> `400` + `{"error":"invalid url"}`
+- `{"url":"ftp://example.com"}` -> `400` + `{"error":"invalid url"}`
+- `{"url":"https://example.com"}` -> `201`
+- `{"url":"http://example.com"}` -> `201`
+
 ### GET `/url/{alias}`
 Возвращает оригинальный URL по alias.
 
@@ -82,6 +96,8 @@ go run ./cmd/app --storage=inmemory --config=./config/local.yaml
 ```bash
 go run ./cmd/app --storage=postgres --config=./config/local.yaml
 ```
+
+Для локального запуска с Postgres по умолчанию используется DSN из `config/local.yaml`. При необходимости его можно переопределить через `POSTGRES_DSN`.
 
 ## Запуск через Docker
 

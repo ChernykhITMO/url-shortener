@@ -12,7 +12,7 @@ func TestCreateAlias_InvalidURL_ReturnsErrInvalidURL(t *testing.T) {
 	s := New(&MockStorage{
 		CreateFn: func(ctx context.Context, alias, originalURL string) (string, error) { return "", nil },
 		GetURLFn: func(ctx context.Context, alias string) (string, error) { return "", nil },
-	}, 20)
+	}, 20, 10)
 
 	testData := []string{
 		"google.com",
@@ -50,7 +50,7 @@ func TestCreateAlias_NormalizesURLBeforeStore(t *testing.T) {
 			return alias, nil
 		},
 		GetURLFn: func(ctx context.Context, alias string) (string, error) { return "", nil },
-	}, 20)
+	}, 20, 10)
 
 	_, err := s.CreateAlias(context.Background(), "  HTTPS://Example.COM:443  ")
 	if err != nil {
@@ -66,7 +66,7 @@ func TestCreateAlias_ValidURL_CreatesAlias(t *testing.T) {
 	s := New(&MockStorage{
 		CreateFn: func(ctx context.Context, alias, originalURL string) (string, error) { return alias, nil },
 		GetURLFn: func(ctx context.Context, alias string) (string, error) { return "", nil },
-	}, 20)
+	}, 20, 10)
 
 	testData := []string{
 		"http://google.com",
@@ -100,7 +100,7 @@ func TestCreateAlias_AliasConflict_ReturnsRetrySuccess(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", nil
 		},
-	}, 20)
+	}, 20, 10)
 
 	url := "https://google.com"
 
@@ -134,7 +134,7 @@ func TestCreateAlias_ExistingURL_ReturnsExistingAlias(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", nil
 		},
-	}, 20)
+	}, 20, 10)
 
 	url := "https://google.com"
 	expectedAlias := "fixedAlias"
@@ -162,7 +162,7 @@ func TestCreateAlias_StorageError_ReturnsError(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", nil
 		},
-	}, 20)
+	}, 20, 10)
 
 	url := "https://google.com"
 
@@ -183,7 +183,7 @@ func TestCreateAlias_AttemptsExceeded_ReturnsErrAttemptsExceeded(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", nil
 		},
-	}, 20)
+	}, 20, 10)
 
 	url := "https://google.com"
 

@@ -26,7 +26,9 @@ type Service struct {
 	generateAlias func() (string, error)
 }
 
-func New(storage Storage, maxAttempts int) *Service {
+func New(storage Storage, maxAttempts int, aliasLength int) *Service {
+	alias.SetLength(aliasLength)
+
 	return &Service{
 		storage:       storage,
 		maxAttempts:   maxAttempts,
@@ -75,11 +77,12 @@ func normalizeAndValidateURL(rawURL string) (string, error) {
 func generateAlias() (string, error) {
 	const op = "services.genAlias"
 
-	out := make([]byte, alias.Length)
+	aliasLength := alias.Length()
+	out := make([]byte, aliasLength)
 	const byteRange = 256
 	const maxNum = byteRange - (byteRange % len(alphabet))
 
-	for i := 0; i < alias.Length; {
+	for i := 0; i < aliasLength; {
 		var num [1]byte
 		if _, err := rand.Read(num[:]); err != nil {
 			return "", wrapError(op, err)
@@ -101,7 +104,7 @@ func wrapError(op string, err error) error {
 }
 
 func validateAlias(s string) error {
-	if len(s) != alias.Length {
+	if len(s) != alias.Length() {
 		return ErrInvalidAlias
 	}
 

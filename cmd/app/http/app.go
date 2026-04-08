@@ -28,8 +28,8 @@ func Run(ctx context.Context, storage services.Storage, cfg *config.Config, log 
 
 	log.Info("starting application...")
 
-	service := services.New(storage, cfg.Service.MaxAttempts)
-	handler := handlers.New(log, service)
+	service := services.New(storage, cfg.Service.MaxAttempts, cfg.Service.AliasLength)
+	handler := handlers.New(log, service, cfg.HTTPServer.MaxBodyBytes)
 	mux := router.New(handler, log)
 
 	srv := &http.Server{

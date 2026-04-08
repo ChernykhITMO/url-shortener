@@ -1,3 +1,11 @@
 package alias
 
-const Length = 10
+var length = 10
+
+func SetLength(v int) {
+	length = v
+}
+
+func Length() int {
+	return length
+}
