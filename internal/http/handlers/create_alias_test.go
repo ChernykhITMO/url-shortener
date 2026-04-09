@@ -20,9 +20,12 @@ type errorResponse struct {
 func TestCreateAlias_Success_Returns201AndAlias(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	s := New(log, &MockService{
-		CreateAliasFn: func(ctx context.Context, originalURL string) (string, error) {
+		CreateAliasFn: func(ctx context.Context, originalURL, requestedAlias string) (string, error) {
 			if originalURL != "https://google.com" {
 				t.Fatalf("unexpected url: %s", originalURL)
+			}
+			if requestedAlias != "" {
+				t.Fatalf("unexpected alias: %s", requestedAlias)
 			}
 			return "fixedAlias", nil
 		},
@@ -52,12 +55,15 @@ func TestCreateAlias_Success_Returns201AndAlias(t *testing.T) {
 	if resp.Alias != "fixedAlias" {
 		t.Fatalf("expected alias %q, got %q", "fixedAlias", resp.Alias)
 	}
+	if location := rec.Header().Get("Location"); location != "/url/fixedAlias" {
+		t.Fatalf("expected location %q, got %q", "/url/fixedAlias", location)
+	}
 }
 
 func TestCreateAlias_InvalidJSON_Returns400AndErrorJSON(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	s := New(log, &MockService{
-		CreateAliasFn: func(ctx context.Context, originalURL string) (string, error) {
+		CreateAliasFn: func(ctx context.Context, originalURL, requestedAlias string) (string, error) {
 			t.Fatal("service should not be called for invalid json")
 			return "", nil
 		},
@@ -88,7 +94,7 @@ func TestCreateAlias_InvalidJSON_Returns400AndErrorJSON(t *testing.T) {
 func TestCreateAlias_PayloadTooLarge_Returns413(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	s := New(log, &MockService{
-		CreateAliasFn: func(ctx context.Context, originalURL string) (string, error) {
+		CreateAliasFn: func(ctx context.Context, originalURL, requestedAlias string) (string, error) {
 			return "", nil
 		},
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
@@ -120,7 +126,7 @@ func TestCreateAlias_ServiceUnknownError_Returns500(t *testing.T) {
 	errDBDown := errors.New("db down")
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	s := New(log, &MockService{
-		CreateAliasFn: func(ctx context.Context, originalURL string) (string, error) {
+		CreateAliasFn: func(ctx context.Context, originalURL, requestedAlias string) (string, error) {
 			return "", errDBDown
 		},
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
@@ -144,5 +150,49 @@ func TestCreateAlias_ServiceUnknownError_Returns500(t *testing.T) {
 	}
 	if resp.Error != msgInternalError {
 		t.Fatalf("expected error %q, got %q", msgInternalError, resp.Error)
+	}
+}
+
+func TestCreateAlias_CustomAlias_Returns201(t *testing.T) {
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	s := New(log, &MockService{
+		CreateAliasFn: func(ctx context.Context, originalURL, requestedAlias string) (string, error) {
+			if requestedAlias != "MyAlias_01" {
+				t.Fatalf("unexpected alias: %s", requestedAlias)
+			}
+			return requestedAlias, nil
+		},
+		GetURLFn: func(ctx context.Context, alias string) (string, error) { return "", nil },
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/url", bytes.NewBufferString(`{"url":"https://google.com","alias":"MyAlias_01"}`))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	rec := httptest.NewRecorder()
+
+	s.CreateAlias(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, rec.Code)
+	}
+}
+
+func TestCreateAlias_UnsupportedContentType_Returns415(t *testing.T) {
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	s := New(log, &MockService{
+		CreateAliasFn: func(ctx context.Context, originalURL, requestedAlias string) (string, error) {
+			t.Fatal("service should not be called for unsupported content type")
+			return "", nil
+		},
+		GetURLFn: func(ctx context.Context, alias string) (string, error) { return "", nil },
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/url", bytes.NewBufferString(`{"url":"https://google.com"}`))
+	req.Header.Set("Content-Type", "text/plain")
+	rec := httptest.NewRecorder()
+
+	s.CreateAlias(rec, req)
+
+	if rec.Code != http.StatusUnsupportedMediaType {
+		t.Fatalf("expected status %d, got %d", http.StatusUnsupportedMediaType, rec.Code)
 	}
 }
