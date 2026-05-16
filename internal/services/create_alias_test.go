@@ -30,7 +30,7 @@ func TestCreateAlias_InvalidURL_ReturnsErrInvalidURL(t *testing.T) {
 
 	for _, data := range testData {
 		t.Run(data, func(t *testing.T) {
-			_, err := s.CreateAlias(context.Background(), data)
+			_, err := s.CreateAlias(context.Background(), data, "")
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -52,7 +52,7 @@ func TestCreateAlias_NormalizesURLBeforeStore(t *testing.T) {
 		GetURLFn: func(ctx context.Context, alias string) (string, error) { return "", nil },
 	}, 20)
 
-	_, err := s.CreateAlias(context.Background(), "  HTTPS://Example.COM:443  ")
+	_, err := s.CreateAlias(context.Background(), "  HTTPS://Example.COM:443  ", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestCreateAlias_ValidURL_CreatesAlias(t *testing.T) {
 
 	for _, data := range testData {
 		t.Run(data, func(t *testing.T) {
-			_, err := s.CreateAlias(context.Background(), data)
+			_, err := s.CreateAlias(context.Background(), data, "")
 			if err != nil {
 				t.Fatalf("expected correct function, got error %v", err)
 			}
@@ -112,7 +112,7 @@ func TestCreateAlias_AliasConflict_ReturnsRetrySuccess(t *testing.T) {
 		return "alias2", nil
 	}
 
-	got, err := s.CreateAlias(context.Background(), url)
+	got, err := s.CreateAlias(context.Background(), url, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestCreateAlias_ExistingURL_ReturnsExistingAlias(t *testing.T) {
 	url := "https://google.com"
 	expectedAlias := "fixedAlias"
 
-	alias, err := s.CreateAlias(context.Background(), url)
+	alias, err := s.CreateAlias(context.Background(), url, "")
 	if err != nil {
 		t.Fatalf("expected nil, got err %v", err)
 	}
@@ -166,7 +166,7 @@ func TestCreateAlias_StorageError_ReturnsError(t *testing.T) {
 
 	url := "https://google.com"
 
-	_, err := s.CreateAlias(context.Background(), url)
+	_, err := s.CreateAlias(context.Background(), url, "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -187,7 +187,7 @@ func TestCreateAlias_AttemptsExceeded_ReturnsErrAttemptsExceeded(t *testing.T) {
 
 	url := "https://google.com"
 
-	alias, err := s.CreateAlias(context.Background(), url)
+	alias, err := s.CreateAlias(context.Background(), url, "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -198,5 +198,39 @@ func TestCreateAlias_AttemptsExceeded_ReturnsErrAttemptsExceeded(t *testing.T) {
 
 	if alias != "" {
 		t.Fatalf("expected empty alias, got %v", alias)
+	}
+}
+
+func TestCreateAlias_CustomAlias_UsesProvidedAlias(t *testing.T) {
+	var gotAlias string
+
+	s := New(&MockStorage{
+		CreateFn: func(ctx context.Context, alias, originalURL string) (string, error) {
+			gotAlias = alias
+			return alias, nil
+		},
+		GetURLFn: func(ctx context.Context, alias string) (string, error) { return "", nil },
+	}, 20)
+
+	alias, err := s.CreateAlias(context.Background(), "https://google.com", "MyAlias_01")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if alias != "MyAlias_01" || gotAlias != "MyAlias_01" {
+		t.Fatalf("expected custom alias to be used, got result=%q stored=%q", alias, gotAlias)
+	}
+}
+
+func TestCreateAlias_CustomAliasConflict_ReturnsErrAliasTaken(t *testing.T) {
+	s := New(&MockStorage{
+		CreateFn: func(ctx context.Context, alias, originalURL string) (string, error) {
+			return "", storage.ErrAliasConflict
+		},
+		GetURLFn: func(ctx context.Context, alias string) (string, error) { return "", nil },
+	}, 20)
+
+	_, err := s.CreateAlias(context.Background(), "https://google.com", "MyAlias_01")
+	if !errors.Is(err, ErrAliasTaken) {
+		t.Fatalf("expected %v, got %v", ErrAliasTaken, err)
 	}
 }

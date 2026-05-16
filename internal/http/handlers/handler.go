@@ -18,10 +18,12 @@ const (
 	msgInternalError   = "internal error"
 	msgPayloadTooLarge = "payload too large"
 	msgInvalidAlias    = "invalid alias"
+	msgAliasTaken      = "alias already taken"
+	msgUnsupportedType = "content type must be application/json"
 )
 
 type Service interface {
-	CreateAlias(ctx context.Context, originalURL string) (string, error)
+	CreateAlias(ctx context.Context, originalURL, requestedAlias string) (string, error)
 	GetURL(ctx context.Context, alias string) (string, error)
 }
 
@@ -47,6 +49,8 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, err error) {
 		h.writeJSONError(w, http.StatusServiceUnavailable, msgTryAgainLater)
 	case errors.Is(err, services.ErrInvalidAlias):
 		h.writeJSONError(w, http.StatusBadRequest, msgInvalidAlias)
+	case errors.Is(err, services.ErrAliasTaken):
+		h.writeJSONError(w, http.StatusConflict, msgAliasTaken)
 	default:
 		h.writeJSONError(w, http.StatusInternalServerError, msgInternalError)
 	}

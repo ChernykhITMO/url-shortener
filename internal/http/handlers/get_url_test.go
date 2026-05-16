@@ -16,7 +16,7 @@ import (
 func TestGetURL_Success_Returns200AndURL(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
 	h := New(log, &MockService{
-		CreateAliasFn: func(ctx context.Context, originalURL string) (string, error) { return "", nil },
+		CreateAliasFn: func(ctx context.Context, originalURL, requestedAlias string) (string, error) { return "", nil },
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			if alias != "fixedAlias" {
 				t.Fatalf("unexpected alias: %s", alias)
@@ -49,7 +49,7 @@ func TestGetURL_Success_Returns200AndURL(t *testing.T) {
 func TestGetURL_InvalidAlias_Returns400(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
 	h := New(log, &MockService{
-		CreateAliasFn: func(ctx context.Context, originalURL string) (string, error) { return "", nil },
+		CreateAliasFn: func(ctx context.Context, originalURL, requestedAlias string) (string, error) { return "", nil },
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			if alias != "short" {
 				t.Fatalf("unexpected alias: %s", alias)
@@ -80,7 +80,7 @@ func TestGetURL_InvalidAlias_Returns400(t *testing.T) {
 func TestGetURL_NotFound_Returns404(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
 	h := New(log, &MockService{
-		CreateAliasFn: func(ctx context.Context, originalURL string) (string, error) { return "", nil },
+		CreateAliasFn: func(ctx context.Context, originalURL, requestedAlias string) (string, error) { return "", nil },
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", services.ErrNotFound
 		},
@@ -108,7 +108,7 @@ func TestGetURL_NotFound_Returns404(t *testing.T) {
 func TestGetURL_ServiceUnknownError_Returns500(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
 	h := New(log, &MockService{
-		CreateAliasFn: func(ctx context.Context, originalURL string) (string, error) { return "", nil },
+		CreateAliasFn: func(ctx context.Context, originalURL, requestedAlias string) (string, error) { return "", nil },
 		GetURLFn: func(ctx context.Context, alias string) (string, error) {
 			return "", errors.New("db down")
 		},
